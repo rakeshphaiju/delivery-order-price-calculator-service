@@ -1,0 +1,9 @@
+version: '3.13'
+
+services:
+  wolt-delivery-order-price-calculator:
+    image: woltdopc:latest
+    build: .
+    ports:
+      - "8000:8000"
+  

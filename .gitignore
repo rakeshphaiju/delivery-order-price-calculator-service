@@ -1,0 +1,11 @@
+.pytest_cache
+.idea
+__pycache__/
+**/*.pyc
+/.vs
+venv/
+.venv/
+.vscode/*
+!.vscode/*.dist
+!.vscode/extensions.json
+!.vscode/use-dist-configs.sh
