@@ -7,7 +7,7 @@ from geopy.distance import geodesic
 
 from service.common.rest_client import RestClient
 from service.common.logger import logger
-from service.schema import DeliveryOrderPrice
+from service.model.dop import DeliveryOrderPrice
 
 router = APIRouter()
 client = RestClient()
