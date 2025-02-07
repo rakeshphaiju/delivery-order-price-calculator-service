@@ -9,3 +9,6 @@ httpx==0.28.1
 sqlalchemy==1.4.31
 psycopg2-binary==2.9.3
 pydantic==1.10.0
+fastapi-login==1.10.3
+passlib==1.7.4
+python-multipart==0.0.5
