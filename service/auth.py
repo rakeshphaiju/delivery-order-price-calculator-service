@@ -5,8 +5,8 @@ from fastapi_login.exceptions import InvalidCredentialsException
 from starlette.responses import RedirectResponse
 from http import HTTPStatus as hs
 from datetime import timedelta
-from pydantic import BaseModel
 
+from service.model import User
 from service.common.exceptions.AuthenticationException import (
     AuthenticationException,
     AccessRightsException,
@@ -20,9 +20,6 @@ login_manager = LoginManager(
     secret="secret-key", token_url="/api/v1/login", use_cookie=True, not_authenticated_exception=NotAuthenticatedException
 )
 
-class User(BaseModel):
-  username: str
-  password: str
 
 # Example user database
 fake_db = {
