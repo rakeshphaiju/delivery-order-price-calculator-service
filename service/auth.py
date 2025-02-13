@@ -1,15 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_login import LoginManager
-from fastapi_login.exceptions import InvalidCredentialsException
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from passlib.context import CryptContext
 from starlette.responses import RedirectResponse
 from http import HTTPStatus as hs
 from datetime import timedelta
 
-from service.model import User
+from db import get_db
+from models.user import UserDb
+from service.common.logger import logger
 from service.common.exceptions.AuthenticationException import (
-    AuthenticationException,
-    AccessRightsException,
     NotAuthenticatedException,
 )
 
@@ -20,36 +23,48 @@ login_manager = LoginManager(
     secret="secret-key", token_url="/api/v1/login", use_cookie=True, not_authenticated_exception=NotAuthenticatedException
 )
 
-
-# Example user database
-fake_db = {
-    "user1": User(username="user1", password="password1"),
-    "user2": User(username="user2", password="password2"),
-}
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 @login_manager.user_loader()
-def load_user(username: str):
-    return fake_db.get(username)
+async def load_user(username: str):
+    return username
+    
+
+@router.post("/api/v1/register")
+async def register(username: str, password: str, db: AsyncSession = Depends(get_db)):
+    # Check if the username already exists
+    result = await db.execute(select(UserDb).filter(UserDb.username == username))
+    db_user = result.scalar_one_or_none()
+    if db_user:
+        raise HTTPException(status_code=hs.BAD_REQUEST, detail="Username already registered")
+
+    # Hash the password
+    hashed_password = pwd_context.hash(password)
+
+    # Create a new user
+    new_user = UserDb(username=username, hashed_password=hashed_password)
+    db.add(new_user)
+    await db.commit()
+    await db.refresh(new_user)
+
+    return {"username": new_user.username, "message": "User created successfully"}
 
 
 @router.post("/api/v1/login")
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
     """Log user in"""
+    # Fetch the user from the database
+    logger.info(f"Login attempt for user: {form_data.username}")
+    result = await db.execute(select(UserDb).filter(UserDb.username == form_data.username))
+    user = result.scalar_one_or_none()
 
-    username = form_data.username
-    password = form_data.password
-
-    if username is None or password is None:
-        raise HTTPException(status_code=hs.BAD_REQUEST, detail="Bad Request")
-    try:
-        user = fake_db.get(username)
-        if not user or user.password != password:
-          raise NotAuthenticatedException("Invalid credentials")
-    except AuthenticationException as err:
-        raise HTTPException(status_code=hs.UNAUTHORIZED, detail=str(err)) from err
-    except AccessRightsException as err:
-        raise HTTPException(hs.FORBIDDEN, detail=str(err)) from err
+    # Verify the username and password
+    if not user or not pwd_context.verify(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=hs.UNAUTHORIZED,
+            detail="Invalid username or password",
+        )
 
     access_token_expires = timedelta(hours=12)
     access_token = login_manager.create_access_token(data=dict(sub=user.username), expires=access_token_expires)
@@ -70,5 +85,5 @@ async def logout(response: Response):
 
 @router.get("/api/v1/user")
 async def get_user(user=Depends(login_manager)):
-    return {"user": user.username}
+    return {"user": user}
   

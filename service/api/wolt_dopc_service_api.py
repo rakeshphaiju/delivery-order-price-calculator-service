@@ -1,13 +1,14 @@
 import os
 from http import HTTPStatus as hs
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import Dict
 from geopy.distance import geodesic
 
 from service.common.rest_client import RestClient
 from service.common.logger import logger
-from service.model.dop import DeliveryOrderPrice
+from service.schema.dop import DeliveryOrderPrice
+from service.auth import login_manager
 
 router = APIRouter()
 client = RestClient()
@@ -15,7 +16,7 @@ client = RestClient()
 
 @router.get("/api/v1/delivery-order-price", response_model=DeliveryOrderPrice)
 async def calculate_delivery_price(
-    venue_slug: str, cart_value: int, user_lat: float, user_lon: float
+    venue_slug: str, cart_value: int, user_lat: float, user_lon: float, user=Depends(login_manager)
 ) -> Dict:
     logger.info(
         f"GET /api/v1/delivery-order-price params venue_slug {venue_slug}, cart_value {cart_value}, user_lat {user_lat}, user_lon {user_lon}"
