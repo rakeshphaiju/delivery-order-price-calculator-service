@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 from service.api.wolt_dopc_service_api import router as wolt_dopc_service_api
 from service.auth import router as auth_router, login_manager
-from db import create_tables
+from service.db import create_tables
 
 # Load environment variables from .env file
 load_dotenv()

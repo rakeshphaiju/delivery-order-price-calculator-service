@@ -9,8 +9,8 @@ from starlette.responses import RedirectResponse
 from http import HTTPStatus as hs
 from datetime import timedelta
 
-from db import get_db
-from models.user import UserDb
+from service.db import get_db
+from service.models.user import UserDb
 from service.common.logger import logger
 from service.common.exceptions.AuthenticationException import (
     NotAuthenticatedException,
@@ -54,10 +54,15 @@ async def register(username: str, password: str, db: AsyncSession = Depends(get_
 @router.post("/api/v1/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
     """Log user in"""
+    
+    username = form_data.username
+    password = form_data.password
     # Fetch the user from the database
-    logger.info(f"Login attempt for user: {form_data.username}")
-    result = await db.execute(select(UserDb).filter(UserDb.username == form_data.username))
+    result = await db.execute(select(UserDb).filter(UserDb.username == username))
     user = result.scalar_one_or_none()
+    
+    if not username or not password:
+        raise HTTPException(status_code=hs.BAD_REQUEST, detail="Bad Request")
 
     # Verify the username and password
     if not user or not pwd_context.verify(form_data.password, user.hashed_password):

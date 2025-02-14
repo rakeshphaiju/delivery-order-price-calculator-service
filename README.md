@@ -6,6 +6,14 @@ Wolt Delivery Order Price Calculator service API based on python fastapi to get 
 
 - GET /healthz
     * Check healthz of service
+- POST /api/v1/register
+    * Register a user for authentication
+- POST /api/v1/login
+    * Authenticate the user
+- POST /api/v1/logout
+    * Logout the user from system
+- GET /api/v1/user
+    * Checkout the user info
 - GET /api/v1/delivery-order-price
     * Calculate the total price including delivery fee and cart value according to the distance between user and venue 
   
@@ -31,7 +39,7 @@ $ docker-compose up --build or python service/main.py
 ```
 
 # Example usages
-An example request to DOPC service look like this:
+An example request to DOPC service look like this (User is required to register and login at first):
 
 ```shell
 $ curl "http://localhost:8000/api/v1/delivery-order-price?venue_slug=home-assignment-venue-helsinki&cart_value=1000&user_lat=60.17094&user_lon=24.93087"

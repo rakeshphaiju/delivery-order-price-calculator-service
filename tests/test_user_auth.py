@@ -1,9 +1,10 @@
 import unittest
 from unittest.mock import patch, MagicMock
 from http import HTTPStatus as hs
-
 from fastapi.testclient import TestClient
+
 from service.main import app
+from tests.util.auth_mock import mock_logged_in_user
 from service.common.exceptions.AuthenticationException import AuthenticationException
 from service.schema.user import User
 
@@ -16,12 +17,11 @@ class TestUserAuthentication(unittest.IsolatedAsyncioTestCase):
         self.client = None
         
         
-    @patch.dict("service.auth.fake_db", side_effect=AuthenticationException("Wrong username or password"))
     async def test_login_with_invalid_credential(self):
         resp = self.client.post("/api/v1/login", data={"username": "invaliduser", "password": "invalidpassword"})
 
         self.assertEqual(resp.status_code, hs.UNAUTHORIZED)
-        self.assertEqual(resp.json(), {"detail": "Wrong username or password"})
+        self.assertEqual(resp.json(), {"detail": "Invalid username or password"})
 
     async def test_login_with_none(self):
         resp = self.client.post("/api/v1/login", data={"username": None, "password": None})
@@ -35,9 +35,8 @@ class TestUserAuthentication(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(hs.FOUND, response.status_code)
         self.assertIn("access-token", response.cookies)
     
-    @patch('service.auth.load_user')
-    @patch('service.auth.fake_db')
-    def test_successful_login(self, mock_fake_db, mock_load_user):
+
+    def test_successful_login(self):
         # Create mock user
         mock_user = MagicMock()
         mock_user.username = "user1"
@@ -61,6 +60,7 @@ class TestUserAuthentication(unittest.IsolatedAsyncioTestCase):
         self.assertIn("access-token", response.cookies)
     
     async def test_logout(self):
+        mock_logged_in_user(app)
         resp = self.client.post("/api/v1/logout")
-        self.assertEqual(resp.status_code, hs.FOUND)
+        self.assertEqual(resp.status_code, hs.OK)
         self.assertNotIn("access-token", resp.cookies)

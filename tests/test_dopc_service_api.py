@@ -4,6 +4,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from service.main import app
+from tests.util.auth_mock import mock_logged_in_user
 from service.common.rest_client import RestClient
 
 
@@ -29,6 +30,7 @@ mock_dynamic_data = {
 class TestDeliveryOrderPriceService(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.client = TestClient(app)
+        mock_logged_in_user(app)
 
     def tearDown(self):
         self.client = None
