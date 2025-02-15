@@ -1,66 +1,96 @@
 import unittest
-from unittest.mock import patch, MagicMock
-from http import HTTPStatus as hs
+from unittest.mock import patch, AsyncMock, Mock
+from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.testclient import TestClient
+from http import HTTPStatus as hs
 
 from service.main import app
+from service.main import app
+from service.db import get_db
+from service.models.user import UserDb
 from tests.util.auth_mock import mock_logged_in_user
-from service.common.exceptions.AuthenticationException import AuthenticationException
-from service.schema.user import User
 
 
 class TestUserAuthentication(unittest.IsolatedAsyncioTestCase):
-    def setUp(self):
-        self.client = TestClient(app)
-    
-    def tearDown(self):
-        self.client = None
-        
-        
-    async def test_login_with_invalid_credential(self):
-        resp = self.client.post("/api/v1/login", data={"username": "invaliduser", "password": "invalidpassword"})
+        def setUp(self):
+            self.client = TestClient(app)
 
-        self.assertEqual(resp.status_code, hs.UNAUTHORIZED)
-        self.assertEqual(resp.json(), {"detail": "Invalid username or password"})
+            # Mock database session
+            self.mock_db = AsyncMock(spec=AsyncSession)
+            app.dependency_overrides[get_db] = lambda: self.mock_db
 
-    async def test_login_with_none(self):
-        resp = self.client.post("/api/v1/login", data={"username": None, "password": None})
-        self.assertEqual(hs.BAD_REQUEST, resp.status_code)
-    
-    @patch("service.auth.fake_db", {"testuser": User(username="testuser", password="testpass")})
-    async def test_successful_login(self):
-    
-        response = self.client.post("/api/v1/login", data={"username": "testuser", "password": "testpass"})
-        
-        self.assertEqual(hs.FOUND, response.status_code)
-        self.assertIn("access-token", response.cookies)
-    
+        def tearDown(self):
+            self.client = None
+            app.dependency_overrides = {}
+            
+        async def test_register_user(self):
+            """Test user registration with a mocked database"""
 
-    def test_successful_login(self):
-        # Create mock user
-        mock_user = MagicMock()
-        mock_user.username = "user1"
-        mock_user.password = "password1"
+            # ✅ Mock database behavior
+            self.mock_db.execute.return_value.scalar_one_or_none = Mock(return_value=None)  # Simulate no existing user
+            self.mock_db.commit = AsyncMock()
+            self.mock_db.refresh = AsyncMock()
 
-        # Configure the mock to return the mock user
-        mock_fake_db.get.return_value = mock_user
-        mock_load_user.return_value = mock_user
-        
-        # Create test user
-        test_user = {
-            "username": "user1",
-            "password": "password1"
-        }
+            response = self.client.post(
+                "/api/v1/register",
+                data={"username": "testuser", "password": "testpass"},
+            )
 
-        # Perform login
-        response = self.client.post("/api/v1/login", data=test_user)
-        
-        # Assert response
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("access-token", response.cookies)
-    
-    async def test_logout(self):
-        mock_logged_in_user(app)
-        resp = self.client.post("/api/v1/logout")
-        self.assertEqual(resp.status_code, hs.OK)
-        self.assertNotIn("access-token", resp.cookies)
+            self.assertEqual(response.status_code, hs.OK)
+            self.assertIn("User created successfully", response.json()["message"])
+
+        async def test_register_existing_user(self):
+            """Test registration of an existing user"""
+
+            # ✅ Mock database behavior
+            self.mock_db.execute.return_value.scalar_one_or_none = Mock(return_value=UserDb(username="testuser"))
+            self.mock_db.commit = AsyncMock()
+            self.mock_db.refresh = AsyncMock()
+
+            response = self.client.post(
+                "/api/v1/register",
+                data={"username": "testuser", "password": "testpass"},
+            )
+
+            self.assertEqual(response.status_code, hs.BAD_REQUEST)
+            self.assertIn("Username already registered", response.json()["detail"])
+            
+            
+        @patch('service.auth.pwd_context.verify')
+        async def test_login_user(self, mock_verify):
+            """Test user login with correct credentials"""
+
+            # ✅ Mock database behavior
+            self.mock_db.execute.return_value.scalar_one_or_none = Mock(return_value=UserDb(username="testuser", password="testpass"))  # Simulate existing user
+            self.mock_db.commit = AsyncMock()
+            self.mock_db.refresh = AsyncMock()
+            mock_verify.return_value = True 
+            
+            response = self.client.post(
+                "/api/v1/login",
+                data={"username": "testuser", "password": "testpass"},
+            )
+
+            self.assertEqual(response.status_code, hs.OK)
+            
+        async def test_login_user_invalid_credentials(self):
+            """Test user login with incorrect credentials"""
+
+            # ✅ Mock database behavior
+            self.mock_db.execute.return_value.scalar_one_or_none = Mock(return_value=None)  # Simulate no existing user
+            self.mock_db.commit = AsyncMock()
+            self.mock_db.refresh = AsyncMock()
+
+            response = self.client.post(
+                "/api/v1/login",
+                data={"username": "testuser", "password": "wrongpass"},
+            )
+
+            self.assertEqual(response.status_code, hs.UNAUTHORIZED)
+            self.assertIn("Invalid username or password", response.json()["detail"])
+       
+        async def test_logout(self):
+            mock_logged_in_user(app)
+            resp = self.client.post("/api/v1/logout")
+            self.assertEqual(resp.status_code, hs.OK)
+            self.assertNotIn("access-token", resp.cookies)

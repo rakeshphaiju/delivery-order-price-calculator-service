@@ -32,7 +32,11 @@ async def load_user(username: str):
     
 
 @router.post("/api/v1/register")
-async def register(username: str, password: str, db: AsyncSession = Depends(get_db)):
+async def register(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
+    
+    username = form_data.username
+    password = form_data.password
+    
     # Check if the username already exists
     result = await db.execute(select(UserDb).filter(UserDb.username == username))
     db_user = result.scalar_one_or_none()
@@ -43,7 +47,7 @@ async def register(username: str, password: str, db: AsyncSession = Depends(get_
     hashed_password = pwd_context.hash(password)
 
     # Create a new user
-    new_user = UserDb(username=username, hashed_password=hashed_password)
+    new_user = UserDb(username=username, password=hashed_password)
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
@@ -65,7 +69,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
         raise HTTPException(status_code=hs.BAD_REQUEST, detail="Bad Request")
 
     # Verify the username and password
-    if not user or not pwd_context.verify(form_data.password, user.hashed_password):
+    if not user or not pwd_context.verify(form_data.password, user.password):
         raise HTTPException(
             status_code=hs.UNAUTHORIZED,
             detail="Invalid username or password",
