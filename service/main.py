@@ -9,7 +9,8 @@ from fastapi.exception_handlers import http_exception_handler
 from dotenv import load_dotenv
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from service.common import logger, NotAuthenticatedException
+from service.common import logger 
+from service.common.exceptions.AuthenticationException import NotAuthenticatedException
 from service.api.wolt_dopc_service_api import router as wolt_dopc_service_api
 from service.auth import router as auth_router, login_manager
 from service.db import create_tables
@@ -67,4 +68,4 @@ async def home_page(user=Depends(login_manager)):
     return {"Welcome": user}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8090)
