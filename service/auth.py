@@ -20,7 +20,10 @@ from service.common.exceptions.AuthenticationException import (
 router = APIRouter(tags=["Authenticator"])
 
 login_manager = LoginManager(
-    secret="secret-key", token_url="/api/v1/login", use_cookie=True, not_authenticated_exception=NotAuthenticatedException
+    secret="secret-key",
+    token_url="/api/v1/login",
+    use_cookie=True,
+    not_authenticated_exception=NotAuthenticatedException,
 )
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -29,19 +32,23 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 @login_manager.user_loader()
 async def load_user(username: str):
     return username
-    
+
 
 @router.post("/api/v1/register")
-async def register(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
-    
+async def register(
+    form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)
+):
+
     username = form_data.username
     password = form_data.password
-    
+
     # Check if the username already exists
     result = await db.execute(select(UserDb).filter(UserDb.username == username))
     db_user = result.scalar_one_or_none()
     if db_user:
-        raise HTTPException(status_code=hs.BAD_REQUEST, detail="Username already registered")
+        raise HTTPException(
+            status_code=hs.BAD_REQUEST, detail="Username already registered"
+        )
 
     # Hash the password
     hashed_password = pwd_context.hash(password)
@@ -56,15 +63,17 @@ async def register(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSe
 
 
 @router.post("/api/v1/login")
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)
+):
     """Log user in"""
-    
+
     username = form_data.username
     password = form_data.password
     # Fetch the user from the database
     result = await db.execute(select(UserDb).filter(UserDb.username == username))
     user = result.scalar_one_or_none()
-    
+
     if not username or not password:
         raise HTTPException(status_code=hs.BAD_REQUEST, detail="Bad Request")
 
@@ -76,7 +85,9 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
         )
 
     access_token_expires = timedelta(hours=12)
-    access_token = login_manager.create_access_token(data=dict(sub=user.username), expires=access_token_expires)
+    access_token = login_manager.create_access_token(
+        data=dict(sub=user.username), expires=access_token_expires
+    )
     response = RedirectResponse(url="/", status_code=hs.FOUND)
 
     response.set_cookie(key="access-token", value=access_token)
@@ -95,4 +106,3 @@ async def logout(response: Response):
 @router.get("/api/v1/user")
 async def get_user(user=Depends(login_manager)):
     return {"user": user}
-  

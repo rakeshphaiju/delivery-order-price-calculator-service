@@ -11,3 +11,9 @@ logger = logging.getLogger(__name__)
 
 # set log level
 logger.setLevel(logging.INFO)
+
+error = logger.error
+info = logger.info
+warning = logger.warning
+debug = logger.debug
+critical = logger.critical

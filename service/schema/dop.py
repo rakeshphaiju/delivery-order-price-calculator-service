@@ -1,8 +1,10 @@
 from pydantic import BaseModel
 
+
 class DeliveryFee(BaseModel):
     fee: float
     distance: int
+
 
 class DeliveryOrderPrice(BaseModel):
     total_price: float

@@ -16,7 +16,11 @@ client = RestClient()
 
 @router.get("/api/v1/delivery-order-price", response_model=DeliveryOrderPrice)
 async def calculate_delivery_price(
-    venue_slug: str, cart_value: int, user_lat: float, user_lon: float, user=Depends(login_manager)
+    venue_slug: str,
+    cart_value: int,
+    user_lat: float,
+    user_lon: float,
+    user=Depends(login_manager),
 ) -> Dict:
     logger.info(
         f"GET /api/v1/delivery-order-price params venue_slug {venue_slug}, cart_value {cart_value}, user_lat {user_lat}, user_lon {user_lon}"
@@ -56,9 +60,15 @@ async def calculate_delivery_price(
         )
 
     # Extract required dynamic data
-    order_minimum_no_surcharge = dynamic_data["venue_raw"]["delivery_specs"]["order_minimum_no_surcharge"]
-    base_price = dynamic_data["venue_raw"]["delivery_specs"]["delivery_pricing"]["base_price"]
-    distance_ranges = dynamic_data["venue_raw"]["delivery_specs"]["delivery_pricing"]["distance_ranges"]
+    order_minimum_no_surcharge = dynamic_data["venue_raw"]["delivery_specs"][
+        "order_minimum_no_surcharge"
+    ]
+    base_price = dynamic_data["venue_raw"]["delivery_specs"]["delivery_pricing"][
+        "base_price"
+    ]
+    distance_ranges = dynamic_data["venue_raw"]["delivery_specs"]["delivery_pricing"][
+        "distance_ranges"
+    ]
 
     delivery_fee = None
     for range_info in distance_ranges:

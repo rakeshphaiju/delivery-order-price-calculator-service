@@ -24,5 +24,8 @@ jobs:
 
       - name: Lint code
         run: |
-          pip install black
           black --check .
+      
+      - name: Run tests
+        run: |
+          pytest -v

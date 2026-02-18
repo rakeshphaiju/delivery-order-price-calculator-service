@@ -86,7 +86,7 @@ class TestDeliveryOrderPriceService(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(hs.BAD_REQUEST, resp.status_code)
         self.assertEqual(expected_resp, resp.json())
-        
+
     @patch.object(RestClient, "get")
     async def test_get_delivery_with_added_surcharge_amount(self, mock_get):
 
@@ -102,7 +102,4 @@ class TestDeliveryOrderPriceService(unittest.IsolatedAsyncioTestCase):
             },
         )
         self.assertEqual(hs.OK, resp.status_code)
-        self.assertGreater(resp.json()['small_order_surcharge'], 0)
-        
-
-        
+        self.assertGreater(resp.json()["small_order_surcharge"], 0)
